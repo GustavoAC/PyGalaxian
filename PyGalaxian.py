@@ -1,3 +1,4 @@
+
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
@@ -8,6 +9,63 @@ import time
 import math
 import random
 from pygame.locals import *
+
+###### NOSSO ######
+from threading import Thread, Lock
+import socket
+import struct
+
+mutex = Lock()
+global GL_POTENC
+global GL_LDR
+global GL_BUTTON
+global POTENC_TOLERANCE
+global LED_MAX
+global STAYING_ALIVE
+
+GL_POTENC = 0
+GL_LDR = 700
+GL_BUTTON = 0
+POTENC_TOLERANCE = 600
+LED_MAX = 700
+STAYING_ALIVE = True
+
+class socketThread(Thread):
+    def __init__(self):
+        Thread.__init__(self)
+
+    def run(self):
+        global GL_POTENC
+        global GL_LDR
+        global GL_BUTTON
+        global POTENC_TOLERANCE
+        global LED_MAX
+        global STAYING_ALIVE
+        HOST, PORT = '', 11100
+
+        udp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
+        orig = (HOST, PORT)
+        udp.bind(orig)
+        while STAYING_ALIVE:
+            msg, cliente = udp.recvfrom(12)
+
+            mutex.acquire()
+            pot, ldr, button = struct.unpack("iii", msg)
+            GL_POTENC = pot
+            GL_LDR = ldr
+            GL_BUTTON = button
+            GL_BUTTON &= 1
+            if GL_LDR > LED_MAX:
+                LED_MAX = GL_LDR
+            # print cliente, GL_POTENC, GL_LDR, GL_BUTTON
+            mutex.release()
+
+        udp.close()
+
+socket_thread = socketThread()
+socket_thread.start()
+###################
 
 pygame.init()
 
@@ -24,8 +82,6 @@ maxspeed = 15
 
 #screen = pygame.display.set_mode(size)
 screen = pygame.display.set_mode(size,DOUBLEBUF | FULLSCREEN)
-
-
 
 def cpumove(cpu, target):
     if target.rect.left < cpu.rect.left:
@@ -853,6 +909,13 @@ class explosion(pygame.sprite.Sprite):
 
 
 def main():
+    global GL_POTENC
+    global GL_LDR
+    global GL_BUTTON
+    global POTENC_TOLERANCE
+    global LED_MAX
+    global STAYING_ALIVE
+
     gameOver = False
     menuExit = False
     stageStart = False
@@ -905,19 +968,35 @@ def main():
                 if event.type == pygame.QUIT:
                     menuExit = True
                     gameOver = True
-
                 if event.type == pygame.KEYDOWN:
-                    if event.key == pygame.K_DOWN or event.key \
-                        == pygame.K_UP:
-                        menuhighlight += 1
-                    elif event.key == pygame.K_RETURN:
-                        menuselect = menuhighlight % 2
+                    if event.key == pygame.K_ESCAPE:
+                        STAYING_ALIVE = False
+                        socket_thread.join()
+                        pygame.quit()
+                        quit()
+
+                # if event.type == pygame.KEYDOWN:
+                #     if event.key == pygame.K_DOWN or event.key \
+                #         == pygame.K_UP:
+                #         menuhighlight += 1
+                #     elif event.key == pygame.K_RETURN:
+                #         menuselect = menuhighlight % 2
+
+            mutex.acquire()
+            if GL_BUTTON == 1:
+                menuselect = menuhighlight % 2
+
+            if GL_LDR < LED_MAX*0.3:
+                menuhighlight += 1
+            mutex.release()
 
             if menuselect == 0:
                 stageStart = True
                 menuExit = True
                 bg_music.play(-1)
             elif menuselect == 1:
+                STAYING_ALIVE = False
+                socket_thread.join()
                 pygame.quit()
                 quit()
             else:
@@ -952,28 +1031,66 @@ def main():
             clock.tick(FPS)
 
         while stageStart:
+            # for event in pygame.event.get():
+            #     if event.type == pygame.QUIT:
+            #         stageStart = False
+            #         gameOver = True
+            #     if event.type == pygame.KEYDOWN:
+            #         user.trigger = 1
+            #         if event.key == pygame.K_LEFT:
+            #             user.speed = -2
+            #         elif event.key == pygame.K_RIGHT:
+            #             user.speed = 2
+            #         elif event.key == pygame.K_UP:
+            #             user.fire = 1
+            #         elif event.key == pygame.K_ESCAPE:
+            #         	quit()
+
+            #     if event.type == pygame.KEYUP:
+            #         if event.key == pygame.K_LEFT or event.key \
+            #             == pygame.K_RIGHT:
+            #             user.trigger = 2
+            #             user.speed = 0
+            #         if event.key == pygame.K_UP:
+            #             user.fire = 0
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     stageStart = False
                     gameOver = True
                 if event.type == pygame.KEYDOWN:
-                    user.trigger = 1
-                    if event.key == pygame.K_LEFT:
-                        user.speed = -2
-                    elif event.key == pygame.K_RIGHT:
-                        user.speed = 2
-                    elif event.key == pygame.K_UP:
-                        user.fire = 1
-                    elif event.key == pygame.K_ESCAPE:
-                    	quit()
+                    if event.key == pygame.K_ESCAPE:
+                        STAYING_ALIVE = False
+                        socket_thread.join()
+                        pygame.quit()
+                        quit()
 
-                if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_LEFT or event.key \
-                        == pygame.K_RIGHT:
-                        user.trigger = 2
-                        user.speed = 0
-                    if event.key == pygame.K_UP:
-                        user.fire = 0
+            mutex.acquire()
+            
+            if GL_BUTTON == 1:
+                user.trigger = 1
+                user.fire = 1
+            else:
+                user.fire = 0
+
+            if GL_POTENC < 4095/2 - POTENC_TOLERANCE or GL_POTENC > 4095/2 + POTENC_TOLERANCE:
+                user.trigger = 1
+                if GL_POTENC > 4095/2 + POTENC_TOLERANCE:
+                    user.speed = 2
+                else:
+                    user.speed = -2
+            else:
+                user.speed = 0
+                user.trigger = 2
+
+            if GL_LDR < LED_MAX*0.3:
+                mutex.release()
+                STAYING_ALIVE = False
+                socket_thread.join()
+                pygame.quit()
+                quit()
+
+            mutex.release()
 
             if wavecounter % 500 == 499 and random.randrange(0, 2) == 1 \
                 and len(healthpacks) < 1:
@@ -1132,40 +1249,81 @@ def main():
 
             moveplayer(user)
 
-            print (
-                wavecounter,
-                wave,
-                user.kills,
-                user.health,
-                user.rect.left,
-                user.movement[0],
-                user.rect.right,
-                )
+            # print (
+            #     wavecounter,
+            #     wave,
+            #     user.kills,
+            #     user.health,
+            #     user.rect.left,
+            #     user.movement[0],
+            #     user.rect.right,
+            #     )
 
         while bossStage:
+
+            # for event in pygame.event.get():
+            #     if event.type == pygame.QUIT:
+            #         gameOver = True
+            #         bossStage = False
+            #     if event.type == pygame.KEYDOWN:
+            #         user.trigger = 1
+            #         if event.key == pygame.K_LEFT:
+            #             user.speed = -2
+            #         elif event.key == pygame.K_RIGHT:
+            #             user.speed = 2
+            #         elif event.key == pygame.K_UP:
+            #             user.fire = 1
+            #         elif event.key == pygame.K_ESCAPE:
+            #             STAYING_ALIVE = False
+            #             pygame.quit()
+            #             quit()
+
+
+            #     if event.type == pygame.KEYUP:
+            #         if event.key == pygame.K_LEFT or event.key \
+            #             == pygame.K_RIGHT:
+            #             user.trigger = 2
+            #             user.speed = 0
+            #         if event.key == pygame.K_UP:
+            #             user.fire = 0
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
+                    stageStart = False
                     gameOver = True
-                    bossStage = False
                 if event.type == pygame.KEYDOWN:
-                    user.trigger = 1
-                    if event.key == pygame.K_LEFT:
-                        user.speed = -2
-                    elif event.key == pygame.K_RIGHT:
-                        user.speed = 2
-                    elif event.key == pygame.K_UP:
-                        user.fire = 1
-                    elif event.key == pygame.K_ESCAPE:
-                    	quit()
+                    if event.key == pygame.K_ESCAPE:
+                        STAYING_ALIVE = False
+                        socket_thread.join()
+                        pygame.quit()
+                        quit()
 
+            mutex.acquire()
+            
+            if GL_BUTTON == 1:
+                user.trigger = 1
+                user.fire = 1
+            else:
+                user.fire = 0
 
-                if event.type == pygame.KEYUP:
-                    if event.key == pygame.K_LEFT or event.key \
-                        == pygame.K_RIGHT:
-                        user.trigger = 2
-                        user.speed = 0
-                    if event.key == pygame.K_UP:
-                        user.fire = 0
+            if GL_POTENC < 4095/2 - POTENC_TOLERANCE or GL_POTENC > 4095/2 + POTENC_TOLERANCE:
+                user.trigger = 1
+                if GL_POTENC > 4095/2 + POTENC_TOLERANCE:
+                    user.speed = 2
+                else:
+                    user.speed = -2
+            else:
+                user.speed = 0
+                user.trigger = 2
+
+            if GL_LDR < LED_MAX*0.3:
+                mutex.release()
+                STAYING_ALIVE = False
+                socket_thread.join()
+                pygame.quit()
+                quit()
+
+            mutex.release()
 
             bossmove(finalboss, user)
 
@@ -1303,6 +1461,8 @@ def main():
             pygame.display.update()
             clock.tick(FPS)
 
+    STAYING_ALIVE = False
+    socket_thread.join()
     pygame.quit()
     quit()
 
