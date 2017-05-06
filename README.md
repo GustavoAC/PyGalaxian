@@ -3,7 +3,7 @@
 ![](https://github.com/shivamshekhar/PyGalaxian/raw/master/Screenshots/1.png)
 
 ## Description:
-A simple vertical space shooter game. This project's current version is intended to implement a joystick-like input for a game of our choice using BeagleBone Black and electronic components, an then use sockets to make the communication between the joystick and the game.
+A simple vertical space shooter game. This project's current version is intended to implement a joystick-like input for a game using BeagleBone Black and electronic components, and then use sockets to realize the communication between the joystick and the game.
 
 The game executes on user's computer as a server, and the joystick code runs on BeagleBone Black as a client.
 
@@ -42,16 +42,11 @@ g++ -std=c++11 -pthread adc.cpp gpio.cpp cliente_bb.cpp -o joystick
 Make sure you have Python 2.7 installed along with pygame (http://www.pygame.org/) library. On your computer, run PyGalaxian.py
 
 ## Controls:
-* Move your spaceship using the potentiometer
-* Fire lazers using button
-* Destroy all enemies to win the game
 * Choose option on starting screen tapping LDR and confirm pushing button
+* Move your spaceship using the potentiometer
+* Fire lasers using button
+* Destroy all enemies to win the game
 * To exit the game while playing, gently tap LDR or press ESC key
-
-
-## Screenshots:
-![](https://github.com/shivamshekhar/PyGalaxian/raw/master/Screenshots/2.png)
-
 
 ## Developed by: 
 **Original**
