@@ -9,7 +9,8 @@ The game executes on user's computer as a server, and the joystick code runs on 
 
 ### Technology:
 Built using pygame library on Python 2.7
-C++11 Standard used on joystick code.
+
+C++11 Standard used on joystick code
 
 ### Version and Release:
 First Release, version 1.0
@@ -17,7 +18,7 @@ First Release, version 1.0
 ### Target Platforms:
 Linux
 
-### BeagleBone Black configuration
+### BeagleBone Black configuration:
 To play the game the way it was intended to be on this project, some electronic pieces will 
 be needed: a potentiometer, a LDR (Light Dependent Resistor), a 10K-ohm resistor and a push button, along with some wires to connect them.
 
@@ -27,7 +28,7 @@ The BeagleBone Black proper configuration can be seen on the image below:
 ### Instructions and Prerequisites:  
 Before compiling and running the program, be sure to have the `/beaglebone` folder copied to your BeagleBone Black, and have the components set on the right configuration like stated above. 
 
-*Compiling and running the joystick*
+**Compiling and running the joystick**
 
 On BBB, enter `/beaglebone` folder and run the following
 
@@ -36,7 +37,8 @@ g++ -std=c++11 -pthread adc.cpp gpio.cpp cliente_bb.cpp -o joystick
 ./joystick
 ```
 
-*Running the game*
+**Running the game**
+
 Make sure you have Python 2.7 installed along with pygame (http://www.pygame.org/) library. On your computer, run PyGalaxian.py
 
 ##### Controls:
@@ -52,11 +54,12 @@ Make sure you have Python 2.7 installed along with pygame (http://www.pygame.org
 
 
 ### Developed by: 
-*Original*
+**Original**
+
 Shivam Shekhar  
 Email: shivam.shekhar.ece14@itbhu.ac.in   
 
-*BeagleBone Black version*
+**BeagleBone Black version**
 * [GustavoAC](https://github.com/GustavoAC)
 * [thiagocesarm](https://github.com/thiagocesarm)
 
